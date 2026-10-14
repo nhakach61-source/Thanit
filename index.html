@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="km">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Depot Thanit - ម៉ាស៊ីនគិតលុយ</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Khmer:wght@400;600;700&display=swap">
+<style>
+:root{
+  --bg:#FFFFFF; --ink:#111111; --muted:#4B5563; --line:#8B95A3; --head:#E5EAF0; --accent:#1D4ED8;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){--bg:#0B0F17;--ink:#FFFFFF;--muted:#C4CBD6;--line:#6B7280;--head:#1B2433;--accent:#7DB2FF}
+}
+:root[data-theme="dark"]{--bg:#0B0F17;--ink:#FFFFFF;--muted:#C4CBD6;--line:#6B7280;--head:#1B2433;--accent:#7DB2FF}
+*,*::before,*::after{box-sizing:inherit}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font-family:"Noto Sans Khmer","Khmer UI","Khmer OS Battambang",-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  font-size:20px;line-height:1.7;display:flex;flex-direction:column;-webkit-text-size-adjust:100%}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-bottom:2px solid var(--line)}
+h1{font-size:30px;line-height:1.4;margin:0;font-weight:700}
+.sub{font-size:20px;color:var(--muted);line-height:1.5}
+#clear{font-family:inherit;font-size:19px;font-weight:600;border:2px solid var(--line);background:var(--bg);color:var(--ink);border-radius:12px;padding:8px 14px;min-height:56px;cursor:pointer}
+#clear.armed{background:#C81E1E;border-color:#C81E1E;color:#fff}
+.cols,.row{display:grid;grid-template-columns:1fr .75fr 1.35fr;gap:0}
+.cols{background:var(--head);font-size:22px;font-weight:700;text-align:center;border-bottom:2px solid var(--line)}
+.cols span{padding:8px 4px}
+#list{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.row{border-bottom:2px solid var(--line)}
+input{width:100%;min-width:0;height:76px;font-family:inherit;font-size:30px;font-weight:600;color:var(--ink);background:var(--bg);
+  border:0;border-right:2px solid var(--line);border-radius:0;padding:0 10px;text-align:right}
+input.q{text-align:center}
+input:focus{outline:4px solid var(--accent);outline-offset:-4px;background:var(--head)}
+.amt{height:76px;display:flex;align-items:center;justify-content:flex-end;padding:0 10px;font-size:28px;font-weight:700;
+  background:var(--head);font-variant-numeric:tabular-nums;overflow:hidden}
+.amt.long{font-size:22px}
+footer{border-top:4px solid var(--ink);background:var(--head);padding:10px 16px;display:grid;grid-template-columns:auto 1fr;gap:0 12px;align-items:center}
+footer .lbl{font-size:22px;font-weight:600}
+footer .val{text-align:right;font-weight:700;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+#ta{font-size:40px;line-height:1.4}
+#tq{font-size:30px;line-height:1.4}
+</style>
+</head>
+<body>
+<header>
+  <div><h1>Depot Thanit</h1><div class="sub">ម៉ាស៊ីនគិតលុយ</div></div>
+  <button id="clear" type="button">សម្អាតទាំងអស់</button>
+</header>
+<div class="cols"><span>តម្លៃ</span><span>ចំនួន</span><span>ទឹកប្រាក់</span></div>
+<main id="list"></main>
+<footer>
+  <div class="lbl">ទឹកប្រាក់សរុប</div><div class="val" id="ta"></div>
+  <div class="lbl">ចំនួនសរុប</div><div class="val" id="tq"></div>
+</footer>
+<script>
+(function(){
+  try{localStorage.removeItem("sales-calc-rows-v1")}catch(e){}
+  var KEY="sales-calc-rows-v2", list=document.getElementById("list"), rows=[];
+  var L={clear:"សម្អាតទាំងអស់",again:"ចុចម្ដងទៀតដើម្បីសម្អាត",price:"តម្លៃ",qty:"ចំនួន"};
+  var fmt=function(n){return Number.isInteger(n)?n.toLocaleString("en-US"):n.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2})};
+  var num=function(s){s=String(s).replace(/[,\s]/g,"");if(s===""||isNaN(s))return null;return parseFloat(s)};
+  function save(){try{localStorage.setItem(KEY,JSON.stringify(rows.map(function(r){return[r.p.value,r.q.value]})))}catch(e){}}
+  function load(){try{var d=JSON.parse(localStorage.getItem(KEY));return Array.isArray(d)?d:null}catch(e){return null}}
+  function mk(label,cls){var i=document.createElement("input");i.type="text";i.inputMode=cls==="q"?"numeric":"decimal";
+    i.setAttribute("enterkeyhint","next");i.autocomplete="off";if(cls)i.className=cls;i.setAttribute("aria-label",label);return i}
+  function addRow(p,q){
+    var el=document.createElement("div");el.className="row";
+    var pi=mk(L.price,""),qi=mk(L.qty,"q"),a=document.createElement("div");
+    a.className="amt";
+    pi.value=p||"";qi.value=q||"";
+    el.append(pi,qi,a);list.appendChild(el);
+    var r={p:pi,q:qi,a:a};rows.push(r);
+    var on=function(){calc();if(r===rows[rows.length-1]&&(pi.value||qi.value))addRow();save()};
+    pi.addEventListener("input",on);qi.addEventListener("input",on);
+    pi.addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefault();qi.focus()}});
+    qi.addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefault();var n=rows[rows.indexOf(r)+1];if(n)n.p.focus()}});
+    return r;
+  }
+  function calc(){
+    var tq=0,ta=0,any=false;
+    rows.forEach(function(r){
+      var p=num(r.p.value),q=num(r.q.value);
+      if(p!==null||q!==null)any=true;if(q!==null)tq+=q;
+      if(p!==null&&q!==null){var v=Math.round(p*q*100)/100;ta+=v;var s=fmt(v);r.a.textContent=s;r.a.className="amt"+(s.length>9?" long":"")}
+      else{r.a.textContent="";r.a.className="amt"}
+    });
+    document.getElementById("tq").textContent=any?tq.toLocaleString("en-US"):"";
+    document.getElementById("ta").textContent=any?fmt(Math.round(ta*100)/100):"";
+  }
+  var saved=load();
+  if(saved&&saved.length){saved.forEach(function(x){addRow(x[0],x[1])})}
+  while(rows.length<15)addRow();
+  var last=rows[rows.length-1];if(last.p.value||last.q.value)addRow();
+  calc();
+  var clr=document.getElementById("clear"),t;
+  clr.addEventListener("click",function(){
+    if(!clr.classList.contains("armed")){clr.classList.add("armed");clr.textContent=L.again;
+      t=setTimeout(function(){clr.classList.remove("armed");clr.textContent=L.clear},3000);return}
+    clearTimeout(t);clr.classList.remove("armed");clr.textContent=L.clear;
+    rows.forEach(function(r){r.p.value="";r.q.value=""});
+    while(rows.length>15){list.lastChild.remove();rows.pop()}
+    calc();save();list.scrollTop=0;rows[0].p.focus();
+  });
+})();
+</script>
+</body>
+</html>
